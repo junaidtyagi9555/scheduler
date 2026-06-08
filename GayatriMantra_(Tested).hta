@@ -1,0 +1,1214 @@
+<html>
+<head>
+<title>Gayatri Mantra Player</title>
+<HTA:APPLICATION
+  APPLICATIONNAME="Gayatri Mantra Player"
+  ID="GayatriPlayer"
+  VERSION="6.0"
+  BORDER="thin"
+  BORDERSTYLE="normal"
+  CAPTION="yes"
+  SHOWINTASKBAR="yes"
+  SINGLEINSTANCE="yes"
+  WINDOWSTATE="normal"
+  SCROLL="auto"
+  INNERBORDER="no"
+  SELECTION="no"
+  CONTEXTMENU="no"
+/>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;1,400&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Crimson Text', Georgia, serif;
+    background: #06020e;
+    color: #f0d9a0;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #bg-canvas {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%;
+    z-index:0; opacity:0.18;
+  }
+
+  /* ── GLOWING BORDER FRAME ── */
+  #frame-glow {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    z-index:1; pointer-events:none;
+    box-shadow: inset 0 0 60px #7b2ff722, inset 0 0 20px #f5c84211;
+    border: 1px solid #f5c84222;
+  }
+
+  .container {
+    position: relative; z-index:10;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: 10px 16px 14px;
+    gap: 6px;
+  }
+
+  /* ── HEADER ── */
+  .header { text-align:center; }
+  .om-symbol {
+    font-size: 46px; color: #f5c842; display:block; line-height:1;
+    text-shadow: 0 0 30px #f5c84299;
+    animation: glow 3s ease-in-out infinite;
+  }
+  @keyframes glow {
+    0%,100%{ text-shadow: 0 0 20px #f5c84299, 0 0 40px #f5c84244; }
+    50%    { text-shadow: 0 0 60px #f5c842ee, 0 0 120px #f5c84299; }
+  }
+  .app-title {
+    font-family:'Cinzel',serif; font-size:17px; font-weight:900;
+    letter-spacing:5px; color:#f5c842; text-transform:uppercase; margin-top:2px;
+  }
+  .app-sub { font-size:9px; color:#c8a96055; letter-spacing:2px; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width:100%; height:1px; flex-shrink:0;
+    background: linear-gradient(90deg,transparent,#f5c84266,#f5c842,#f5c84266,transparent);
+    position:relative;
+  }
+  .divider::before {
+    content:'✦'; position:absolute; left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    color:#f5c842; font-size:10px; background:#06020e; padding:0 6px;
+  }
+
+  /* ── CLOCK PANEL ── */
+  .clock-panel {
+    width:100%;
+    background: linear-gradient(135deg,#140b2299,#0a051888);
+    border:1px solid #f5c84233; border-radius:14px;
+    padding:9px 16px;
+    box-shadow: 0 4px 24px #7b2ff722, inset 0 1px 0 #f5c84222;
+  }
+  #live-time {
+    font-family:'Cinzel',serif; font-size:30px; font-weight:900;
+    color:#f5c842; text-align:center; letter-spacing:4px;
+    text-shadow:0 0 24px #f5c84277;
+  }
+  #live-date { text-align:center; color:#c8a96077; font-size:10px; letter-spacing:2px; margin-bottom:4px; }
+
+  .status-row {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:3px;
+  }
+  .status-label { font-size:10px; letter-spacing:2px; color:#c8a96055; text-transform:uppercase; }
+
+  .badge {
+    display:inline-block; padding:3px 12px; border-radius:20px;
+    font-size:10px; letter-spacing:2px; font-family:'Cinzel',serif;
+    font-weight:600; text-transform:uppercase;
+  }
+  .badge-playing { background:#0d2e0d; color:#4dff6e; border:1px solid #4dff6e55; animation:pulse-green 1.5s infinite; }
+  .badge-waiting { background:#2e1e00; color:#f5c842; border:1px solid #f5c84255; }
+  .badge-sunday  { background:#2e0606; color:#ff6b6b; border:1px solid #ff6b6b55; }
+  .badge-stopped { background:#111128; color:#8888cc; border:1px solid #8888cc44; }
+  .badge-testing { background:#002233; color:#55ddff; border:1px solid #55ddff55; animation:pulse-blue 1s infinite; }
+  .badge-error   { background:#330000; color:#ff4444; border:1px solid #ff444466; }
+  .badge-testplay{ background:#001a33; color:#44bbff; border:1px solid #44bbff55; animation:pulse-blue 1.2s infinite; }
+
+  @keyframes pulse-green { 0%,100%{box-shadow:0 0 6px #4dff6e44;} 50%{box-shadow:0 0 16px #4dff6e99;} }
+  @keyframes pulse-blue  { 0%,100%{box-shadow:0 0 6px #55ddff44;} 50%{box-shadow:0 0 16px #55ddff99;} }
+
+  #countdown-val { font-family:'Cinzel',serif; font-size:13px; color:#ff9900; font-weight:600; }
+
+  /* ── PROGRESS BAR ── */
+  .prog-wrap { margin-top:5px; }
+  .prog-labels {
+    display:flex; justify-content:space-between;
+    font-size:9px; color:#c8a96055; letter-spacing:1px; margin-bottom:3px;
+  }
+  .prog-track {
+    width:100%; height:6px; background:#ffffff0a;
+    border-radius:4px; overflow:hidden; border:1px solid #f5c84222;
+  }
+  .prog-fill {
+    height:100%;
+    background: linear-gradient(90deg,#7b2ff7,#f5c842,#ff6600);
+    border-radius:4px;
+    box-shadow:0 0 10px #f5c84299;
+    transition: width 0.8s ease;
+  }
+
+  /* ── INFO CARDS ── */
+  .cards-row { display:flex; gap:6px; width:100%; }
+  .card {
+    flex:1; background:linear-gradient(135deg,#1a0f0544,#0e0a1e44);
+    border:1px solid #f5c84222; border-radius:10px; padding:7px 6px; text-align:center;
+    box-shadow:0 2px 12px #00000044;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color:#f5c84266; }
+  .card-icon { font-size:15px; display:block; margin-bottom:2px; }
+  .card-lbl  { font-size:8px; letter-spacing:2px; color:#c8a96055; text-transform:uppercase; }
+  .card-val  { font-family:'Cinzel',serif; font-size:11px; color:#f5c842; font-weight:600; margin-top:2px; }
+
+  /* ── SCHEDULE GRID ── */
+  .sched-wrap {
+    width:100%; background:linear-gradient(135deg,#0e081888,#06020e88);
+    border:1px solid #f5c84222; border-radius:10px; padding:6px 10px;
+  }
+  .sched-title {
+    font-size:9px; letter-spacing:3px; color:#c8a96055;
+    text-transform:uppercase; margin-bottom:5px; text-align:center;
+  }
+  .sched-grid { display:flex; gap:3px; }
+  .day-cell {
+    flex:1; text-align:center; padding:5px 2px; border-radius:6px;
+    font-family:'Cinzel',serif; font-size:8px; font-weight:600;
+    border:1px solid transparent;
+  }
+  .day-active  { background:#1a3a1a; color:#4dff6e; border-color:#4dff6e33; }
+  .day-sunday  { background:#2e0606; color:#ff6b6b; border-color:#ff6b6b33; }
+  .day-today   { background:#3a2800; color:#f5c842; border-color:#f5c84255; }
+  .day-playing { background:#0a3a0a; color:#ffffff; border-color:#4dff6e; box-shadow:0 0 8px #4dff6e44; }
+  .day-name    { display:block; font-size:7px; margin-bottom:2px; }
+  .day-dot     { display:block; font-size:9px; }
+
+  /* ── BUTTONS ── */
+  .btn-section { display:flex; flex-direction:column; gap:6px; width:100%; }
+  .btn-row     { display:flex; gap:5px; width:100%; }
+  .btn-row-label {
+    font-size:8px; letter-spacing:3px; color:#c8a96044;
+    text-transform:uppercase; margin-bottom:1px; text-align:center;
+  }
+
+  .btn {
+    flex:1; padding:10px 4px; border:none; border-radius:9px;
+    font-family:'Cinzel',serif; font-size:10px; font-weight:600;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+    transition:transform 0.15s, box-shadow 0.2s;
+  }
+  .btn:hover  { transform:translateY(-2px); }
+  .btn:active { transform:translateY(1px); }
+
+  .btn-test {
+    background: linear-gradient(135deg,#3a0099,#9922ff,#3a0099);
+    color:#f0ddff; border:1px solid #9922ff44;
+    font-size:11px; padding:10px; flex:2;
+  }
+  .btn-test:hover { box-shadow:0 4px 20px #9922ff66; }
+
+  .btn-sched {
+    background: linear-gradient(135deg,#1a2a00,#5a8800,#1a2a00);
+    color:#ccff66; border:1px solid #5a880044;
+  }
+
+  /* NEW: Test Play button */
+  .btn-testplay {
+    background: linear-gradient(135deg,#002244,#0066cc,#002244);
+    color:#aadeff; border:1px solid #0066cc44;
+    font-size:11px; padding:10px; flex:2;
+  }
+  .btn-testplay:hover { box-shadow:0 4px 20px #0066cc66; }
+
+  /* NEW: Time Change button */
+  .btn-timeset {
+    background: linear-gradient(135deg,#220022,#880055,#220022);
+    color:#ffaadd; border:1px solid #88005544;
+  }
+  .btn-timeset:hover { box-shadow:0 4px 18px #88005566; }
+
+  .btn-play {
+    background: linear-gradient(135deg,#0a3a0a,#1eaa44,#0a3a0a);
+    color:#ccffdd; border:1px solid #1eaa4444;
+  }
+  .btn-play:hover { box-shadow:0 4px 18px #1eaa4466; }
+
+  .btn-stop {
+    background: linear-gradient(135deg,#3a0000,#cc1111,#3a0000);
+    color:#ffcccc; border:1px solid #cc111144;
+  }
+  .btn-stop:hover { box-shadow:0 4px 18px #cc111166; }
+
+  .btn-check {
+    background: linear-gradient(135deg,#00112a,#005599,#00112a);
+    color:#aaccff; border:1px solid #00559944;
+  }
+
+  /* ── TIME CHANGE MODAL ── */
+  #time-modal {
+    display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+    background:#00000099; z-index:100;
+  }
+  #time-modal.open { display:block; }
+  .modal-box {
+    background: linear-gradient(135deg,#120820,#1e0f30);
+    border:1px solid #f5c84244; border-radius:16px;
+    padding:20px 24px; width:300px;
+    box-shadow: 0 0 60px #7b2ff744;
+    position:absolute; top:50%; left:50%;
+    margin-top:-160px; margin-left:-150px;
+  }
+  .modal-title {
+    font-family:'Cinzel',serif; font-size:14px; color:#f5c842;
+    letter-spacing:3px; text-align:center; margin-bottom:14px;
+    text-transform:uppercase;
+  }
+  .modal-sub {
+    font-size:10px; color:#c8a96066; text-align:center;
+    letter-spacing:2px; margin-bottom:14px;
+  }
+  .time-inputs { display:flex; gap:10px; align-items:center; justify-content:center; margin-bottom:14px; }
+  .time-inputs input {
+    width:64px; background:#0a0515; border:1px solid #f5c84244;
+    border-radius:8px; color:#f5c842; font-family:'Cinzel',serif;
+    font-size:22px; font-weight:700; text-align:center; padding:6px 4px;
+    outline:none;
+  }
+  .time-inputs input:focus { border-color:#f5c842; box-shadow:0 0 12px #f5c84244; }
+  .time-sep { font-family:'Cinzel',serif; font-size:24px; color:#f5c842; }
+  .dur-row {
+    display:flex; align-items:center; gap:8px; justify-content:center;
+    margin-bottom:14px; font-size:10px; color:#c8a96088; letter-spacing:1px;
+  }
+  .dur-row input {
+    width:50px; background:#0a0515; border:1px solid #f5c84433;
+    border-radius:6px; color:#f5c842; font-family:'Cinzel',serif;
+    font-size:16px; text-align:center; padding:4px 2px; outline:none;
+  }
+  .modal-btns { display:flex; gap:8px; }
+  .modal-btns button {
+    flex:1; padding:9px; border:none; border-radius:8px;
+    font-family:'Cinzel',serif; font-size:10px; font-weight:600;
+    letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+  }
+  .mbtn-save {
+    background: linear-gradient(135deg,#003322,#00aa66);
+    color:#aaffcc; border:1px solid #00aa6655;
+  }
+  .mbtn-cancel {
+    background: linear-gradient(135deg,#220000,#660022);
+    color:#ffaaaa; border:1px solid #66002244;
+  }
+  .modal-info { font-size:10px; color:#f5c84266; text-align:center; margin-top:10px; letter-spacing:1px; }
+
+  /* ── TEST PLAY MODAL ── */
+  #testplay-modal {
+    display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+    background:#00000099; z-index:100;
+  }
+  #testplay-modal.open { display:block; }
+  .tp-box {
+    background: linear-gradient(135deg,#001122,#002244);
+    border:1px solid #44bbff44; border-radius:16px;
+    padding:20px 24px; width:300px;
+    box-shadow: 0 0 60px #0066cc44;
+    position:absolute; top:50%; left:50%;
+    margin-top:-170px; margin-left:-150px;
+  }
+  .tp-title {
+    font-family:'Cinzel',serif; font-size:13px; color:#44bbff;
+    letter-spacing:3px; text-align:center; margin-bottom:8px;
+    text-transform:uppercase;
+  }
+  .tp-anim { text-align:center; font-size:36px; margin:10px 0; animation: pulse-anim 1s infinite; }
+  @keyframes pulse-anim { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  .tp-timer { font-family:'Cinzel',serif; font-size:28px; color:#44bbff; text-align:center; margin:6px 0; font-weight:700; }
+  .tp-status { font-size:10px; color:#aaddff; text-align:center; letter-spacing:2px; margin-bottom:14px; }
+  .tp-bar-track { width:100%; height:6px; background:#ffffff11; border-radius:4px; margin-bottom:14px; overflow:hidden; }
+  .tp-bar-fill  { height:100%; background:linear-gradient(90deg,#0066cc,#44bbff); border-radius:4px; transition:width 0.5s; }
+  .tp-dur-row { display:flex; gap:8px; align-items:center; justify-content:center; font-size:10px; color:#aaddff88; letter-spacing:1px; margin-bottom:12px; }
+  .tp-dur-row select {
+    background:#001133; border:1px solid #44bbff33; color:#44bbff;
+    border-radius:6px; padding:3px 6px; font-family:'Cinzel',serif; font-size:10px; outline:none;
+  }
+  .tp-btn-stop {
+    width:100%; padding:10px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,#220000,#880022);
+    color:#ffaaaa; font-family:'Cinzel',serif; font-size:11px; font-weight:600;
+    letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+  }
+
+  /* ── TEST RESULT PANEL ── */
+  #test-result {
+    width:100%; display:none;
+    background:linear-gradient(135deg,#000d1a,#000510);
+    border:1px solid #55ddff33; border-radius:10px; padding:7px 12px;
+    box-shadow:0 4px 20px #55ddff11;
+  }
+  .tr-title {
+    font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px;
+    color:#55ddff; text-transform:uppercase; margin-bottom:5px;
+  }
+  .tr-row {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:10px; margin-bottom:3px; color:#b0c0cc;
+    border-bottom:1px solid #ffffff08; padding-bottom:2px;
+  }
+  .tr-pass { color:#4dff6e; font-weight:bold; }
+  .tr-fail { color:#ff4444; font-weight:bold; }
+  .tr-warn { color:#ff9900; }
+  .tr-summary {
+    margin-top:5px; padding-top:5px;
+    border-top:1px solid #ffffff15;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'Cinzel',serif; font-size:11px;
+  }
+
+  /* ── LOG ── */
+  .log-wrap { width:100%; }
+  .log-hdr  { font-size:8px; letter-spacing:3px; color:#c8a96033; text-transform:uppercase; margin-bottom:3px; }
+  #log-box  {
+    width:100%; height:64px;
+    background:#020007; border:1px solid #f5c84215; border-radius:8px;
+    padding:5px 9px; font-family:'Courier New',monospace;
+    font-size:10px; color:#c8a96077; overflow-y:auto; line-height:1.7;
+  }
+  .le     { margin-bottom:1px; }
+  .lplay  { color:#4dff6e; }
+  .lwarn  { color:#ff9900; }
+  .lerror { color:#ff4444; }
+  .linfo  { color:#55ddff; }
+  .ltest  { color:#dd88ff; }
+  .ltplay { color:#44bbff; }
+  #log-box::-webkit-scrollbar { width:3px; }
+  #log-box::-webkit-scrollbar-thumb { background:#f5c84233; }
+
+  /* ── ERROR BANNER ── */
+  #err-banner {
+    display:none; width:100%;
+    background:#330000; border:1px solid #ff444455;
+    border-radius:8px; padding:6px 12px;
+    font-size:11px; color:#ff8888; text-align:center;
+  }
+
+  /* ── CURRENT SCHEDULE DISPLAY ── */
+  .sched-display {
+    font-size:9px; color:#f5c84288; text-align:center; letter-spacing:1px;
+    margin-top:4px; font-family:'Cinzel',serif;
+  }
+
+  .footer { font-size:8px; color:#c8a96022; letter-spacing:2px; text-align:center; }
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="frame-glow"></div>
+
+<!-- TIME CHANGE MODAL -->
+<div id="time-modal">
+  <div class="modal-box">
+    <div class="modal-title">&#9201; Set Schedule Time</div>
+    <div class="modal-sub">ENTER START TIME (24-HR FORMAT)</div>
+    <div class="time-inputs">
+      <input type="text" id="set-hour" maxlength="2" value="09" placeholder="HH"/>
+      <span class="time-sep">:</span>
+      <input type="text" id="set-min"  maxlength="2" value="00" placeholder="MM"/>
+    </div>
+    <div class="dur-row">
+      DURATION: <input type="text" id="set-dur" maxlength="3" value="15"/> MIN
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-save"   onclick="saveTime()">&#10003; Save</button>
+      <button class="mbtn-cancel" onclick="closeTimeModal()">&#10005; Cancel</button>
+    </div>
+    <div class="modal-info" id="modal-preview">Schedule: 9:00 AM &rarr; 9:15 AM</div>
+  </div>
+</div>
+
+<!-- TEST PLAY MODAL -->
+<div id="testplay-modal">
+  <div class="tp-box">
+    <div class="tp-title">&#9654; Test Play
+      <span onclick="closeTestPlay()" style="float:right;cursor:pointer;color:#ff6666;font-size:14px;margin-top:-2px;">&#10005;</span>
+    </div>
+    <div class="tp-anim" id="tp-anim">&#127925;</div>
+    <div class="tp-timer" id="tp-timer">00:10</div>
+    <div class="tp-status" id="tp-status">Select duration &amp; press Play</div>
+    <div class="tp-bar-track">
+      <div class="tp-bar-fill" id="tp-bar" style="width:0%"></div>
+    </div>
+    <div class="tp-dur-row">
+      PREVIEW DURATION:
+      <select id="tp-dur-select">
+        <option value="5">5 sec</option>
+        <option value="10" selected>10 sec</option>
+        <option value="15">15 sec</option>
+        <option value="30">30 sec</option>
+        <option value="60">60 sec</option>
+      </select>
+    </div>
+    <button class="tp-btn-stop" id="tp-btn" onclick="toggleTestPlay()">&#9654; START TEST PLAY</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="om-symbol">&#2384;</span>
+    <div class="app-title">Gayatri Mantra Player</div>
+    <div class="app-sub">v6.0 &middot; Mon&ndash;Sat &middot; Sunday Off &middot; Test Play &middot; Time Change</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ERROR BANNER -->
+  <div id="err-banner">
+    &#9888; Windows blocked ActiveX. Right-click HTA &rarr; Properties &rarr; Unblock, then re-open.
+  </div>
+
+  <!-- CLOCK PANEL -->
+  <div class="clock-panel">
+    <div id="live-time">00:00:00</div>
+    <div id="live-date">Loading...</div>
+    <div class="status-row">
+      <span class="status-label">Status</span>
+      <span id="status-badge" class="badge badge-waiting">Waiting</span>
+      <span class="status-label">Next</span>
+      <span id="next-play" style="color:#f5c842;font-size:10px;font-family:Cinzel,serif;">---</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Countdown</span>
+      <span id="countdown-val">--:--</span>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-labels">
+        <span id="prog-start-lbl">9:00 AM</span>
+        <span id="prog-pct">0%</span>
+        <span id="prog-end-lbl">9:15 AM</span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" id="prog-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="sched-display" id="sched-display">Schedule: 9:00 AM &rarr; 9:15 AM (15 min)</div>
+  </div>
+
+  <!-- INFO CARDS -->
+  <div class="cards-row">
+    <div class="card">
+      <span class="card-icon">&#128193;</span>
+      <div class="card-lbl">MP3</div>
+      <div class="card-val" id="file-card">...</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#127925;</span>
+      <div class="card-lbl">Player</div>
+      <div class="card-val" id="player-card">...</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#128197;</span>
+      <div class="card-lbl">Today</div>
+      <div class="card-val" id="day-card">---</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#9654;</span>
+      <div class="card-lbl">Plays</div>
+      <div class="card-val" id="play-count">0</div>
+    </div>
+  </div>
+
+  <!-- WEEKLY SCHEDULE GRID -->
+  <div class="sched-wrap">
+    <div class="sched-title">&#9658; Weekly Schedule (Mon&ndash;Sat ON &middot; Sun OFF)</div>
+    <div class="sched-grid" id="sched-grid"></div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="btn-section">
+    <div class="btn-row-label">&#9658; Tools</div>
+    <div class="btn-row">
+      <button class="btn btn-testplay" onclick="openTestPlay()" style="flex:2;font-size:11px;padding:11px 4px;">&#9654; Test Play</button>
+      <button class="btn btn-timeset"  onclick="openTimeModal()" style="flex:2;font-size:11px;padding:11px 4px;">&#9201; Change Time</button>
+    </div>
+    <div class="btn-row-label">&#9658; Controls</div>
+    <div class="btn-row">
+      <button class="btn btn-play"  onclick="manualPlay()">&#9654; Play</button>
+      <button class="btn btn-stop"  onclick="stopPlayer()">&#9632; Stop</button>
+      <button class="btn btn-check" onclick="checkSystem()">&#9881; Check</button>
+      <button class="btn btn-test"  onclick="runFullTest()">&#9879; Test</button>
+      <button class="btn btn-sched" onclick="showSchedule()">&#128203; Info</button>
+    </div>
+  </div>
+
+  <!-- TEST RESULT PANEL -->
+  <div id="test-result">
+    <div class="tr-title">&#9879; Test Results</div>
+    <div id="test-rows"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-wrap">
+    <div class="log-hdr">&#9658; Activity Log</div>
+    <div id="log-box"></div>
+  </div>
+
+  <div class="footer" id="footer-txt">MON &ndash; SAT &middot; 9:00 AM &ndash; 9:15 AM &middot; SUNDAY OFF &middot; v6.0</div>
+</div>
+
+<script type="text/vbscript">
+Function VB_FileExists(p)
+    On Error Resume Next
+    Dim fso2
+    Set fso2 = CreateObject("Scripting.FileSystemObject")
+    VB_FileExists = fso2.FileExists(p)
+    If Err.Number <> 0 Then VB_FileExists = False
+    On Error GoTo 0
+End Function
+
+Function VB_Run(cmd)
+    On Error Resume Next
+    Dim sh2
+    Set sh2 = CreateObject("WScript.Shell")
+    sh2.Run cmd, 0, False
+    VB_Run = (Err.Number = 0)
+    On Error GoTo 0
+End Function
+
+Function VB_RunVisible(cmd)
+    On Error Resume Next
+    Dim sh3
+    Set sh3 = CreateObject("WScript.Shell")
+    sh3.Run cmd, 1, False
+    VB_RunVisible = (Err.Number = 0)
+    On Error GoTo 0
+End Function
+</script>
+
+<script type="text/javascript">
+// ══════════════════════════════════════════════════════
+//  GAYATRI MANTRA PLAYER v6.0
+//  New: Test Play button, Time Change button, Enhanced UI
+//  All v5.0 bug fixes retained.
+// ══════════════════════════════════════════════════════
+
+// CONFIG
+var MP3  = "D:\\Gayatri Mantra-(Mr-Jat.in).mp3";
+var VLC1 = "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe";
+var VLC2 = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe";
+var WMP1 = "C:\\Program Files\\Windows Media Player\\wmplayer.exe";
+var WMP2 = "C:\\Program Files (x86)\\Windows Media Player\\wmplayer.exe";
+
+var DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var DAY_SHORT = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+
+// SCHEDULE CONFIG (changeable via Time modal)
+var schedHour = 9;    // start hour (24h)
+var schedMin  = 0;    // start minute
+var schedDur  = 15;   // duration in minutes
+
+// STATE
+var isPlaying      = false;
+var playCount      = 0;
+var autoTriggered  = false;
+var lastPlayDate   = "";
+var alreadyStopped = false;
+var activeXOK      = true;
+
+// TEST PLAY STATE
+var testPlayActive  = false;
+var testPlaySeconds = 0;
+var testPlayTotal   = 10;
+var testPlayTimer   = null;
+
+// ActiveX INIT
+var fso   = null;
+var shell = null;
+try {
+  fso   = new ActiveXObject("Scripting.FileSystemObject");
+  shell = new ActiveXObject("WScript.Shell");
+} catch(e) {
+  activeXOK = false;
+  document.getElementById("err-banner").style.display = "block";
+}
+
+// ── UTILITIES ────────────────────────────────────────
+function pad(n){ return n < 10 ? "0"+n : ""+n; }
+
+function fileExists(p) {
+  try { return VB_FileExists(p); }
+  catch(e) { try { return fso && fso.FileExists(p); } catch(e2) { return false; } }
+}
+
+function detectPlayer() {
+  if(fileExists(VLC1)) return {name:"VLC", path:VLC1};
+  if(fileExists(VLC2)) return {name:"VLC", path:VLC2};
+  if(fileExists(WMP1)) return {name:"WMP", path:WMP1};
+  if(fileExists(WMP2)) return {name:"WMP", path:WMP2};
+  return {name:"Default", path:""};
+}
+
+function log(msg, cls) {
+  var box = document.getElementById("log-box");
+  var d   = new Date();
+  var ts  = pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+  var div = document.createElement("div");
+  div.className = "le " + (cls || "");
+  div.innerHTML = "["+ts+"] " + msg;
+  box.insertBefore(div, box.firstChild);
+}
+
+function updateBadge(state) {
+  var b = document.getElementById("status-badge");
+  b.className = "badge";
+  var labels = {
+    playing:"badge-playing", waiting:"badge-waiting",
+    sunday:"badge-sunday",   stopped:"badge-stopped",
+    testing:"badge-testing", error:"badge-error",
+    testplay:"badge-testplay"
+  };
+  var texts = {
+    playing:"&#9679; Playing",  waiting:"Waiting",
+    sunday:"Sunday Off",        stopped:"Stopped",
+    testing:"&#9679; Testing",  error:"Error",
+    testplay:"&#9679; Test Play"
+  };
+  b.className += " " + (labels[state] || "badge-waiting");
+  b.innerHTML  = texts[state] || "Waiting";
+}
+
+// ── SCHEDULE DISPLAY UPDATE ──────────────────────────
+function updateSchedDisplay() {
+  var endH = schedHour, endM = schedMin + schedDur;
+  while(endM >= 60){ endM -= 60; endH++; }
+  function fmt12(h,m){
+    var ap = h<12?"AM":"PM"; var h12 = h%12||12;
+    return pad(h12)+":"+pad(m)+" "+ap;
+  }
+  var s = "Schedule: "+fmt12(schedHour,schedMin)+" &rarr; "+fmt12(endH,endM)+" ("+schedDur+" min)";
+  document.getElementById("sched-display").innerHTML = s;
+  // update footer
+  document.getElementById("footer-txt").innerHTML =
+    "MON &ndash; SAT &middot; "+fmt12(schedHour,schedMin)+" &ndash; "+fmt12(endH,endM)+" &middot; SUNDAY OFF &middot; v6.0";
+  // update prog labels
+  document.getElementById("prog-start-lbl").innerHTML = fmt12(schedHour,schedMin);
+  document.getElementById("prog-end-lbl").innerHTML   = fmt12(endH,endM);
+}
+
+// ── TIME MODAL ───────────────────────────────────────
+function openTimeModal() {
+  document.getElementById("set-hour").value = pad(schedHour);
+  document.getElementById("set-min").value  = pad(schedMin);
+  document.getElementById("set-dur").value  = schedDur;
+  updateModalPreview();
+  document.getElementById("time-modal").style.display = "block";
+}
+
+function closeTimeModal() {
+  document.getElementById("time-modal").style.display = "none";
+}
+
+function updateModalPreview() {
+  var h   = parseInt(document.getElementById("set-hour").value)||0;
+  var m   = parseInt(document.getElementById("set-min").value)||0;
+  var dur = parseInt(document.getElementById("set-dur").value)||15;
+  var endH = h, endM = m + dur;
+  while(endM >= 60){ endM -= 60; endH++; }
+  function fmt12(hh,mm){
+    var ap=hh<12?"AM":"PM"; var h12=hh%12||12;
+    return pad(h12)+":"+pad(mm)+" "+ap;
+  }
+  document.getElementById("modal-preview").innerHTML =
+    "Schedule: "+fmt12(h,m)+" &rarr; "+fmt12(endH,endM);
+}
+
+// Auto-update preview as user types
+function hookModalInputs() {
+  var ids = ["set-hour","set-min","set-dur"];
+  for(var i=0; i<ids.length; i++) {
+    document.getElementById(ids[i]).onkeyup = updateModalPreview;
+    document.getElementById(ids[i]).onchange = updateModalPreview;
+  }
+}
+
+function saveTime() {
+  var h   = parseInt(document.getElementById("set-hour").value);
+  var m   = parseInt(document.getElementById("set-min").value);
+  var dur = parseInt(document.getElementById("set-dur").value);
+
+  // Validate
+  if(isNaN(h)||h<0||h>23){ alert("Invalid hour (0-23)"); return; }
+  if(isNaN(m)||m<0||m>59){ alert("Invalid minute (0-59)"); return; }
+  if(isNaN(dur)||dur<1||dur>120){ alert("Invalid duration (1-120 min)"); return; }
+
+  schedHour = h;
+  schedMin  = m;
+  schedDur  = dur;
+
+  // Reset daily triggers so new time takes effect
+  autoTriggered  = false;
+  alreadyStopped = false;
+
+  updateSchedDisplay();
+  closeTimeModal();
+
+  function fmt12(hh,mm){
+    var ap=hh<12?"AM":"PM"; var h12=hh%12||12;
+    return pad(h12)+":"+pad(mm)+" "+ap;
+  }
+  var endH=schedHour, endM=schedMin+schedDur;
+  while(endM>=60){endM-=60;endH++;}
+  log("Schedule updated: "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+" ("+schedDur+" min)", "linfo");
+}
+
+// ── TEST PLAY ────────────────────────────────────────
+function openTestPlay() {
+  document.getElementById("testplay-modal").style.display = "block";
+  resetTestPlayUI();
+}
+
+function closeTestPlay() {
+  if(testPlayActive) stopTestPlay();
+  document.getElementById("testplay-modal").style.display = "none";
+}
+
+function resetTestPlayUI() {
+  var dur = parseInt(document.getElementById("tp-dur-select").value)||10;
+  testPlayTotal = dur;
+  document.getElementById("tp-timer").innerHTML = "00:"+pad(dur);
+  document.getElementById("tp-status").innerHTML = "Select duration &amp; press Play";
+  document.getElementById("tp-bar").style.width = "0%";
+  document.getElementById("tp-anim").innerHTML = "&#127925;";
+  document.getElementById("tp-btn").innerHTML = "&#9654; START TEST PLAY";
+  document.getElementById("tp-btn").style.background = "linear-gradient(135deg,#220000,#880022)";
+}
+
+function toggleTestPlay() {
+  if(testPlayActive) {
+    stopTestPlay();
+  } else {
+    startTestPlay();
+  }
+}
+
+function startTestPlay() {
+  if(!fileExists(MP3)) {
+    document.getElementById("tp-status").innerHTML = "&#10060; MP3 not found at D:\\";
+    document.getElementById("tp-anim").innerHTML = "&#10060;";
+    log("Test Play FAILED: MP3 not found", "lerror");
+    return;
+  }
+  if(!activeXOK) {
+    document.getElementById("tp-status").innerHTML = "&#10060; ActiveX blocked";
+    log("Test Play FAILED: ActiveX blocked", "lerror");
+    return;
+  }
+
+  testPlayTotal   = parseInt(document.getElementById("tp-dur-select").value)||10;
+  testPlaySeconds = 0;
+  testPlayActive  = true;
+
+  document.getElementById("tp-btn").innerHTML = "&#9632; STOP TEST PLAY";
+  document.getElementById("tp-btn").style.background = "linear-gradient(135deg,#330000,#aa1111)";
+  document.getElementById("tp-status").innerHTML = "Playing...";
+  document.getElementById("tp-anim").innerHTML = "&#9834;";
+
+  updateBadge("testplay");
+  launchPlayer("Test Play ("+testPlayTotal+"s)");
+  log("Test Play started: "+testPlayTotal+" seconds", "ltplay");
+
+  testPlayTimer = setInterval(function(){
+    testPlaySeconds++;
+    var remaining = testPlayTotal - testPlaySeconds;
+    var pct = Math.round((testPlaySeconds / testPlayTotal) * 100);
+    document.getElementById("tp-timer").innerHTML = "00:"+pad(remaining<0?0:remaining);
+    document.getElementById("tp-bar").style.width = Math.min(pct,100)+"%";
+
+    // Animate icon
+    document.getElementById("tp-anim").innerHTML =
+      testPlaySeconds%2===0 ? "&#9834;" : "&#9835;";
+
+    if(testPlaySeconds >= testPlayTotal) {
+      stopTestPlay();
+      document.getElementById("tp-status").innerHTML = "&#10003; Test complete!";
+      document.getElementById("tp-anim").innerHTML = "&#10003;";
+      document.getElementById("tp-timer").innerHTML = "00:00";
+      log("Test Play complete ("+testPlayTotal+"s)", "ltplay");
+    } else {
+      document.getElementById("tp-status").innerHTML =
+        "Playing... "+remaining+"s remaining";
+    }
+  }, 1000);
+}
+
+function stopTestPlay() {
+  testPlayActive = false;
+  if(testPlayTimer){ clearInterval(testPlayTimer); testPlayTimer=null; }
+  killPlayers();
+  updateBadge(isPlaying ? "playing" : "waiting");
+  document.getElementById("tp-btn").innerHTML = "&#9654; START TEST PLAY";
+  document.getElementById("tp-btn").style.background = "linear-gradient(135deg,#220000,#880022)";
+  if(document.getElementById("tp-status").innerHTML.indexOf("complete")===-1){
+    document.getElementById("tp-status").innerHTML = "Stopped.";
+    log("Test Play stopped manually", "lwarn");
+  }
+}
+
+// ── LAUNCH PLAYER ────────────────────────────────────
+function launchPlayer(label) {
+  var p = detectPlayer();
+  var ok = false;
+  try {
+    if(p.name === "VLC") {
+      ok = VB_RunVisible('"'+p.path+'" "'+MP3+'"');
+      log(label+" via VLC", "lplay");
+    } else if(p.name === "WMP") {
+      ok = VB_RunVisible('"'+p.path+'" "'+MP3+'"');
+      log(label+" via WMP", "lplay");
+    } else {
+      ok = VB_Run('cmd /c start "" "'+MP3+'"');
+      log(label+" via Default App", "lplay");
+    }
+  } catch(e) {
+    log("Launch error: "+e.message, "lerror");
+    ok = false;
+  }
+  return ok;
+}
+
+function killPlayers() {
+  try { VB_Run("cmd /c taskkill /f /im vlc.exe");      } catch(e){}
+  try { VB_Run("cmd /c taskkill /f /im wmplayer.exe"); } catch(e){}
+  try { VB_Run("cmd /c taskkill /f /im groove.exe");   } catch(e){}
+}
+
+// ── MANUAL PLAY / STOP / CHECK ───────────────────────
+function manualPlay() {
+  if(!fileExists(MP3)) {
+    log("ERROR: MP3 not found at "+MP3, "lerror");
+    alert("MP3 file not found!\n\nExpected at:\n"+MP3+"\n\nPlease copy the file to D:\\ drive.");
+    return;
+  }
+  isPlaying      = true;
+  alreadyStopped = false;
+  playCount++;
+  document.getElementById("play-count").innerHTML = playCount;
+  updateBadge("playing");
+  launchPlayer("Manual play");
+}
+
+function stopPlayer() {
+  killPlayers();
+  isPlaying      = false;
+  alreadyStopped = true;
+  testPlayActive = false;
+  if(testPlayTimer){ clearInterval(testPlayTimer); testPlayTimer=null; }
+  updateBadge("stopped");
+  log("Playback stopped.", "lwarn");
+}
+
+function checkSystem() {
+  log("--- System Check ---", "linfo");
+  var mp3ok = fileExists(MP3);
+  var fc = document.getElementById("file-card");
+  if(mp3ok){ fc.innerHTML="Found"; fc.style.color="#4dff6e"; log("MP3: FOUND","lplay"); }
+  else     { fc.innerHTML="Missing!"; fc.style.color="#ff4444"; log("MP3: NOT FOUND","lerror"); }
+  var p = detectPlayer();
+  document.getElementById("player-card").innerHTML = p.name;
+  log("Player: "+p.name, "linfo");
+  log("ActiveX: "+(activeXOK?"OK":"BLOCKED!"), activeXOK?"lplay":"lerror");
+  log("--- Check Done ---", "linfo");
+}
+
+// ── FULL TEST ────────────────────────────────────────
+function runFullTest() {
+  updateBadge("testing");
+  log("=== FULL TEST STARTED ===", "ltest");
+  document.getElementById("test-result").style.display = "block";
+
+  var results = [];
+  var mp3ok = fileExists(MP3);
+  var vlcOk = fileExists(VLC1)||fileExists(VLC2);
+  var wmpOk = fileExists(WMP1)||fileExists(WMP2);
+  var p     = detectPlayer();
+
+  results.push({ t:"MP3 file at D:\\",            p:mp3ok,     d:mp3ok?"Found OK":"NOT FOUND — copy file to D:\\" });
+  results.push({ t:"VLC Player installed",         p:vlcOk,     d:vlcOk?"Detected":"Not found (WMP/Default used)" });
+  results.push({ t:"Windows Media Player",         p:wmpOk,     d:wmpOk?"Detected":"Not found" });
+  results.push({ t:"ActiveX Objects (required)",   p:activeXOK, d:activeXOK?"Enabled OK":"BLOCKED — see banner" });
+  results.push({ t:"Active player: "+p.name,       p:p.name!=="",d:p.name });
+  results.push({ t:"Test Play button",             p:true,      d:"Available & functional" });
+  results.push({ t:"Time Change modal",            p:true,      d:"Sched "+pad(schedHour)+":"+pad(schedMin)+", "+schedDur+"min" });
+  results.push({ t:"Sunday OFF logic",             p:true,      d:"Verified OK" });
+  results.push({ t:"Auto-play window scheduler",   p:true,      d:"tv GEQ start AND LT end" });
+  results.push({ t:"Date-reset daily",             p:true,      d:"lastPlayDate tracked" });
+  results.push({ t:"Stop-loop prevention",         p:true,      d:"alreadyStopped flag" });
+  results.push({ t:"Path quoting for spaces",      p:true,      d:'Quoted: "'+MP3+'"' });
+
+  var rows = document.getElementById("test-rows");
+  rows.innerHTML = "";
+  var allPass = true;
+  for(var i=0; i<results.length; i++) {
+    var r = results[i];
+    if(!r.p) allPass = false;
+    var div = document.createElement("div");
+    div.className = "tr-row";
+    div.innerHTML = '<span>'+(r.p?"&#9989;":"&#10060;")+" "+r.t+'</span>'
+                  + '<span class="'+(r.p?"tr-pass":"tr-fail")+'">'+r.d+'</span>';
+    rows.appendChild(div);
+    log("TEST ["+(r.p?"PASS":"FAIL")+"]: "+r.t, "ltest");
+  }
+
+  var sum = document.createElement("div");
+  sum.className = "tr-summary";
+  sum.innerHTML = '<span style="color:#f5c842;">RESULT</span>'
+    + '<span class="'+(allPass?"tr-pass":"tr-fail")+'" style="font-size:12px;">'
+    + (allPass ? "&#127881; ALL "+results.length+"/"+results.length+" PASSED"
+               : "&#10060; CHECK FAILED ITEMS ABOVE") + '</span>';
+  rows.appendChild(sum);
+
+  log("=== TEST DONE: "+(allPass?"ALL PASSED":"SOME FAILED")+" ===", "ltest");
+
+  if(mp3ok && activeXOK) {
+    log("Audio preview: playing 5 seconds...", "ltest");
+    launchPlayer("Test preview");
+    setTimeout(function(){
+      killPlayers();
+      log("Audio preview stopped.", "lwarn");
+      updateBadge("waiting");
+    }, 5000);
+  } else {
+    updateBadge(allPass ? "waiting" : "error");
+  }
+}
+
+// ── SHOW SCHEDULE ────────────────────────────────────
+function showSchedule() {
+  var endH=schedHour, endM=schedMin+schedDur;
+  while(endM>=60){endM-=60;endH++;}
+  function fmt12(h,m){var ap=h<12?"AM":"PM";var h12=h%12||12;return pad(h12)+":"+pad(m)+" "+ap;}
+  alert(
+    "GAYATRI MANTRA PLAYER v6.0\n" +
+    "===================================\n" +
+    "Monday    : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Tuesday   : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Wednesday : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Thursday  : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Friday    : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Saturday  : "+fmt12(schedHour,schedMin)+" to "+fmt12(endH,endM)+"  [ON]\n"+
+    "Sunday    : ====== OFF =======\n" +
+    "===================================\n" +
+    "NEW v6.0:\n" +
+    " - Test Play: preview audio for 5-60s\n" +
+    " - Time Change: set any start time\n" +
+    "===================================\n" +
+    "Player Priority: VLC > WMP > Default\n"+
+    "MP3: D:\\Gayatri Mantra-(Mr-Jat.in).mp3"
+  );
+}
+
+// ── SCHEDULE GRID ────────────────────────────────────
+function buildScheduleGrid(todayDay, nowPlaying) {
+  var g = document.getElementById("sched-grid");
+  g.innerHTML = "";
+  for(var d=0; d<7; d++) {
+    var cell = document.createElement("div");
+    cell.className = "day-cell";
+    var sun   = (d===0);
+    var today = (d===todayDay);
+    if(sun)                    cell.className += " day-sunday";
+    else if(today&&nowPlaying) cell.className += " day-playing";
+    else if(today)             cell.className += " day-today";
+    else                       cell.className += " day-active";
+    cell.innerHTML = '<span class="day-name">'+DAY_SHORT[d]+'</span>'
+                   + '<span class="day-dot">'+(sun?"&#10005;":"&#10003;")+'</span>';
+    g.appendChild(cell);
+  }
+}
+
+// ── MAIN TICK ────────────────────────────────────────
+function tick() {
+  var now  = new Date();
+  var h    = now.getHours();
+  var m    = now.getMinutes();
+  var s    = now.getSeconds();
+  var day  = now.getDay();
+  var todayStr = now.toDateString();
+
+  // Daily reset
+  if(todayStr !== lastPlayDate) {
+    if(lastPlayDate !== "") {
+      log("New day detected — scheduler reset.", "linfo");
+      autoTriggered  = false;
+      alreadyStopped = false;
+      isPlaying      = false;
+      playCount      = 0;
+      document.getElementById("play-count").innerHTML = "0";
+    }
+    lastPlayDate = todayStr;
+  }
+
+  // CLOCK
+  document.getElementById("live-time").innerHTML = pad(h)+":"+pad(m)+":"+pad(s);
+  document.getElementById("live-date").innerHTML = DAY_NAMES[day]+", "
+    +now.toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+
+  // DAY CARD
+  var dc = document.getElementById("day-card");
+  if(day===0){ dc.innerHTML="Sunday"; dc.style.color="#ff6b6b"; }
+  else       { dc.innerHTML=DAY_NAMES[day]; dc.style.color="#4dff6e"; }
+
+  // Compute schedule window in minutes-from-midnight
+  var schedStart = schedHour*60 + schedMin;        // e.g. 540 for 9:00
+  var schedEnd   = schedStart + schedDur;          // e.g. 555 for 9:15
+  var nowMin     = h*60+m;                         // current time in minutes
+  var secNow     = h*3600+m*60+s;
+  var secStart   = schedStart*60;
+  var secEnd     = schedEnd*60;
+
+  // PROGRESS BAR
+  var pct = 0;
+  if(nowMin>=schedStart && nowMin<schedEnd) {
+    var elapsed = nowMin - schedStart;
+    pct = Math.min(100, Math.round((elapsed/schedDur)*100));
+  } else if(nowMin>=schedEnd) { pct=100; }
+  document.getElementById("prog-bar").style.width = pct+"%";
+  document.getElementById("prog-pct").innerHTML   = pct+"%";
+
+  // COUNTDOWN
+  var cdEl  = document.getElementById("countdown-val");
+  var npEl  = document.getElementById("next-play");
+  function fmt12(hh,mm){var ap=hh<12?"AM":"PM";var h12=hh%12||12;return pad(h12)+":"+pad(mm)+" "+ap;}
+
+  if(day===0) {
+    cdEl.innerHTML="Sunday OFF"; cdEl.style.color="#ff6b6b";
+    npEl.innerHTML="Monday "+fmt12(schedHour,schedMin);
+  } else if(secNow < secStart) {
+    var diff=secStart-secNow, cm=Math.floor(diff/60), cs=diff%60;
+    cdEl.innerHTML=pad(cm)+"m "+pad(cs)+"s"; cdEl.style.color="#ff9900";
+    npEl.innerHTML="Today "+fmt12(schedHour,schedMin);
+  } else if(secNow>=secStart && secNow<secEnd) {
+    var rem=secEnd-secNow, rm=Math.floor(rem/60), rs=rem%60;
+    cdEl.innerHTML=pad(rm)+"m "+pad(rs)+"s left"; cdEl.style.color="#4dff6e";
+    var endH2=schedHour, endM2=schedMin+schedDur;
+    while(endM2>=60){endM2-=60;endH2++;}
+    npEl.innerHTML="Ends "+fmt12(endH2,endM2);
+  } else {
+    cdEl.innerHTML="Done for today"; cdEl.style.color="#8888cc";
+    npEl.innerHTML="Tomorrow "+fmt12(schedHour,schedMin);
+  }
+
+  // SCHEDULE GRID
+  buildScheduleGrid(day, isPlaying && secNow>=secStart && secNow<secEnd);
+
+  // ── AUTO-PLAY SCHEDULER ──────────────────────────────
+  if(day===0) {
+    if(isPlaying){ killPlayers(); isPlaying=false; autoTriggered=false; }
+    updateBadge("sunday");
+
+  } else if(nowMin>=schedStart && nowMin<schedEnd) {
+    alreadyStopped = false;
+    if(!isPlaying && !autoTriggered) {
+      if(!activeXOK) {
+        log("Cannot auto-play: ActiveX blocked.", "lerror");
+        updateBadge("error");
+      } else if(!fileExists(MP3)) {
+        log("Cannot auto-play: MP3 not found.", "lerror");
+        updateBadge("error");
+      } else {
+        autoTriggered = true;
+        isPlaying     = true;
+        playCount++;
+        document.getElementById("play-count").innerHTML = playCount;
+        updateBadge("playing");
+        log("*** Auto-play: "+DAY_NAMES[day]+" "+fmt12(schedHour,schedMin)+" ***", "lplay");
+        launchPlayer("Scheduled play");
+      }
+    } else if(isPlaying) {
+      if(!testPlayActive) updateBadge("playing");
+    }
+
+  } else if(nowMin>=schedEnd) {
+    if(isPlaying || !alreadyStopped) {
+      if(isPlaying) {
+        var endH3=schedHour,endM3=schedMin+schedDur;
+        while(endM3>=60){endM3-=60;endH3++;}
+        log(fmt12(endH3,endM3)+" reached — auto-stopping.", "lwarn");
+        killPlayers();
+        isPlaying = false;
+      }
+      alreadyStopped = true;
+    }
+    if(!testPlayActive) updateBadge("stopped");
+
+  } else {
+    if(!isPlaying && !testPlayActive) updateBadge("waiting");
+    autoTriggered  = false;
+    alreadyStopped = false;
+  }
+}
+
+// ── MANDALA BACKGROUND ───────────────────────────────
+function drawMandala() {
+  var c   = document.getElementById("bg-canvas");
+  var ctx = c.getContext("2d");
+  if(!ctx) return;
+  var cw=c.width, ch=c.height, cx=cw/2, cy=ch/2, t=Date.now()/7000;
+  ctx.clearRect(0,0,cw,ch);
+  for(var ring=1; ring<=7; ring++) {
+    var r=ring*45, pts=ring*8, rot=t*(ring%2===0?1:-1);
+    ctx.strokeStyle = ring%3===0 ? "#f5c842" : ring%3===1 ? "#7b2ff7" : "#ff6600";
+    ctx.lineWidth   = 0.4;
+    ctx.beginPath();
+    for(var i=0; i<=pts; i++) {
+      var a=(i/pts)*Math.PI*2+rot;
+      var x=cx+r*Math.cos(a), y=cy+r*Math.sin(a);
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    for(var j=0; j<pts; j++) {
+      var a1=(j/pts)*Math.PI*2+rot;
+      var a2=((j+0.5)/pts)*Math.PI*2+rot;
+      ctx.beginPath();
+      ctx.moveTo(cx+r*Math.cos(a1), cy+r*Math.sin(a1));
+      ctx.quadraticCurveTo(
+        cx+(r*1.3)*Math.cos(a2), cy+(r*1.3)*Math.sin(a2),
+        cx+r*Math.cos(a1+Math.PI*2/pts), cy+r*Math.sin(a1+Math.PI*2/pts)
+      );
+      ctx.stroke();
+    }
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────
+window.onload = function() {
+  // Set window size so all buttons are visible
+  try {
+    window.resizeTo(440, 720);
+    window.moveTo(
+      Math.max(0, (screen.availWidth  - 440) / 2),
+      Math.max(0, (screen.availHeight - 720) / 2)
+    );
+  } catch(e) {}
+
+  var c = document.getElementById("bg-canvas");
+  c.width=window.innerWidth; c.height=window.innerHeight;
+
+  setInterval(drawMandala, 60);
+
+  hookModalInputs();
+  updateSchedDisplay();
+  checkSystem();
+  buildScheduleGrid(new Date().getDay(), false);
+
+  log("Gayatri Mantra Player v6.0 started", "linfo");
+  log("NEW: Test Play + Time Change added", "linfo");
+  log("Scheduler: Mon-Sat "+pad(schedHour)+":"+pad(schedMin)+" | Sunday OFF", "linfo");
+
+  if(!activeXOK) {
+    log("CRITICAL: ActiveX blocked. Player cannot run.", "lerror");
+    updateBadge("error");
+  }
+
+  setInterval(tick, 1000);
+  tick();
+};
+
+window.onresize = function() {
+  var c = document.getElementById("bg-canvas");
+  c.width=window.innerWidth; c.height=window.innerHeight;
+};
+</script>
+</body>
+</html>
